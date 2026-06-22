@@ -199,9 +199,8 @@
 
   function onDown(e) {
     if (!ready()) return;
-    const p = pointerPos(e);
-    if (Math.hypot(p.x - anchor.x, p.y - anchor.y) > 90 * scale) return;
-    aiming = true; setPouch(p); draw(); e.preventDefault();
+    // Start aiming from anywhere on the canvas (forgiving for little fingers)
+    aiming = true; setPouch(pointerPos(e)); draw(); e.preventDefault();
   }
   function onMove(e) {
     if (!aiming) return;

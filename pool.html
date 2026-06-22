@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#1b4332" />
+<title>One-Shot Pool — Win Your Phone Back!</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(165deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%);
+    color: #fff; user-select: none; -webkit-user-select: none; touch-action: none;
+  }
+  body { display: flex; flex-direction: column; height: 100vh; text-align: center; }
+
+  .hud {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px; font-weight: 800; font-size: 15px; background: rgba(0,0,0,0.22);
+  }
+  .hud .pill { background: rgba(255,255,255,0.12); padding: 6px 12px; border-radius: 999px; }
+  .hud b { color: #ffe066; }
+
+  #stage { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; touch-action: none; border-radius: 16px; box-shadow: 0 14px 40px rgba(0,0,0,0.45); }
+
+  .hint {
+    padding: 10px 16px 14px; font-size: 14px; font-weight: 600; opacity: 0.9; min-height: 20px;
+  }
+  .hint b { color: #ffe066; }
+
+  /* Overlays */
+  .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 10; }
+  .overlay.hidden { display: none; }
+  .panel {
+    width: 100%; max-width: 420px; background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);
+    border: 2px solid rgba(255,255,255,0.18); border-radius: 26px;
+    padding: 26px 22px 28px; box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+  }
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase;
+    background: rgba(255, 224, 102, 0.95); color: #1b4332; padding: 5px 12px; border-radius: 999px; margin-bottom: 12px;
+  }
+  h1 { font-size: 25px; margin: 6px 0 4px; line-height: 1.15; }
+  .big-emoji { font-size: 64px; margin: 4px 0; animation: pop 0.5s ease; }
+  @keyframes pop { 0% { transform: scale(0); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+  p.lead { font-size: 16px; line-height: 1.5; font-weight: 600; margin: 8px 0 18px; }
+  p.lead b { color: #ffe066; }
+  .win-msg { font-size: 18px; font-weight: 700; line-height: 1.45; color: #b8f7c2; margin: 10px 0 18px; }
+  .sub { font-size: 14px; opacity: 0.85; margin-top: 6px; }
+  button {
+    width: 100%; font-size: 21px; font-weight: 800; padding: 16px; border-radius: 16px; border: none;
+    cursor: pointer; color: #1b4332; background: #ffe066; transition: transform 0.05s ease;
+  }
+  button:active { transform: scale(0.97); }
+  .footer { padding: 8px; font-size: 11px; opacity: 0.6; background: rgba(0,0,0,0.18); }
+</style>
+</head>
+<body>
+  <div class="hud">
+    <div class="pill">🎱 One-Shot Pool</div>
+    <div class="pill">Shots: <b><span id="shots">0</span></b></div>
+  </div>
+
+  <div id="stage">
+    <canvas id="table"></canvas>
+
+    <div class="overlay" id="startScreen">
+      <div class="panel">
+        <div class="badge">🌲 West Feliciana Wildlife 🌲</div>
+        <h1>One-Shot Pool 🎱</h1>
+        <div class="big-emoji">🎱</div>
+        <p class="lead">
+          One ball, one table. <b>Pull back from the ball</b> to aim and set power,
+          then <b>let go</b> to shoot. Sink it in any pocket and you
+          <b>win your phone back!</b> 📱<br>Take as many shots as you need. 💚
+        </p>
+        <button onclick="startGame()">Play 🎯</button>
+      </div>
+    </div>
+
+    <div class="overlay hidden" id="winScreen">
+      <div class="panel">
+        <div class="big-emoji">📱</div>
+        <h1>Sunk It! 🎉</h1>
+        <div class="win-msg" id="winMsg"></div>
+        <button onclick="resetGame()">Play Again 🔁</button>
+        <div class="sub" id="winStats"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint" id="hint">Pull back from the ball and release to shoot 🎯</div>
+  <div class="footer">West Feliciana Wildlife Bus Trip 🚌 · Sink-to-Win</div>
+
+<script>
+  const canvas = document.getElementById('table');
+  const ctx = canvas.getContext('2d');
+  const shotsEl = document.getElementById('shots');
+  const hintEl = document.getElementById('hint');
+  const startScreen = document.getElementById('startScreen');
+  const winScreen = document.getElementById('winScreen');
+  const winMsg = document.getElementById('winMsg');
+  const winStats = document.getElementById('winStats');
+
+  const winMessages = [
+    "Breakups are the worst — but you've still got the touch. Be good to yourself today. 💚",
+    "Clean shot. Clean slate. Better days are rolling in. 🎱",
+    "Phone's back, and so is your luck. You're going to be just fine. 🌿",
+    "Nothing but pocket. Take that confidence with you. You deserve good things. 💛",
+    "Sank it like it was nothing. Onward — the best is ahead. 🌳"
+  ];
+
+  // Layout (computed on resize)
+  let W, H, rail, pocketR, ballR;
+  let pockets = [];
+  let ball = { x: 0, y: 0, vx: 0, vy: 0, inPlay: false };
+  let shots = 0;
+  let playing = false;
+  let pocketedAnim = null; // {x,y,t} shrinking ball into pocket
+
+  // Aiming
+  let aiming = false;
+  let aimX = 0, aimY = 0;       // current pointer
+  const MAX_PULL = 150;         // px of pull = max power
+  const MAX_SPEED = 22;
+
+  function sizeCanvas() {
+    const stage = document.getElementById('stage');
+    const pad = 16;
+    const availW = stage.clientWidth - pad * 2;
+    const availH = stage.clientHeight - pad * 2;
+    // Portrait table, aspect ~ 1 : 1.7, fit inside available space
+    const aspect = 1.7;
+    let cw = availW, ch = cw * aspect;
+    if (ch > availH) { ch = availH; cw = ch / aspect; }
+    const dpr = window.devicePixelRatio || 1;
+    canvas.style.width = cw + 'px';
+    canvas.style.height = ch + 'px';
+    canvas.width = Math.round(cw * dpr);
+    canvas.height = Math.round(ch * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    W = cw; H = ch;
+    rail = Math.max(18, W * 0.07);
+    pocketR = Math.max(22, W * 0.085);   // generous pockets (forgiving)
+    ballR = Math.max(11, W * 0.045);
+
+    pockets = [
+      { x: rail, y: rail }, { x: W - rail, y: rail },
+      { x: rail, y: H / 2 }, { x: W - rail, y: H / 2 },
+      { x: rail, y: H - rail }, { x: W - rail, y: H - rail }
+    ];
+
+    if (!ball.inPlay && !playing) placeBall();
+    draw();
+  }
+
+  function placeBall() {
+    ball.x = W / 2;
+    ball.y = H * 0.72;
+    ball.vx = ball.vy = 0;
+    ball.inPlay = true;
+  }
+
+  function startGame() {
+    shots = 0; shotsEl.textContent = '0';
+    pocketedAnim = null;
+    playing = true;
+    startScreen.classList.add('hidden');
+    winScreen.classList.add('hidden');
+    placeBall();
+    hintEl.innerHTML = 'Pull back from the ball and release to shoot 🎯';
+    draw();
+  }
+
+  function resetGame() {
+    winScreen.classList.add('hidden');
+    startScreen.classList.remove('hidden');
+    playing = false;
+    placeBall();
+    draw();
+  }
+
+  // ---------- Input (slingshot: pull back, release to fire) ----------
+  function pointerPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const p = (e.touches && e.touches[0]) || e;
+    return { x: p.clientX - r.left, y: p.clientY - r.top };
+  }
+
+  function isBallStill() {
+    return ball.inPlay && Math.hypot(ball.vx, ball.vy) < 0.05;
+  }
+
+  function onDown(e) {
+    if (!playing || !isBallStill()) return;
+    const p = pointerPos(e);
+    // Must grab near the ball to start aiming
+    if (Math.hypot(p.x - ball.x, p.y - ball.y) > ballR * 4.5) return;
+    aiming = true; aimX = p.x; aimY = p.y;
+    e.preventDefault();
+  }
+  function onMove(e) {
+    if (!aiming) return;
+    const p = pointerPos(e); aimX = p.x; aimY = p.y;
+    draw();
+    e.preventDefault();
+  }
+  function onUp(e) {
+    if (!aiming) return;
+    aiming = false;
+    // Travel direction is OPPOSITE the pull (like pulling a slingshot)
+    let dx = ball.x - aimX, dy = ball.y - aimY;
+    let pull = Math.hypot(dx, dy);
+    if (pull < 8) { draw(); return; }            // tiny pull = no shot
+    pull = Math.min(pull, MAX_PULL);
+    const power = (pull / MAX_PULL) * MAX_SPEED;
+    const nx = dx / Math.hypot(dx, dy), ny = dy / Math.hypot(dx, dy);
+    ball.vx = nx * power; ball.vy = ny * power;
+    shots++; shotsEl.textContent = shots;
+    hintEl.innerHTML = 'Nice shot! 🎱';
+    e.preventDefault();
+  }
+
+  canvas.addEventListener('mousedown', onDown);
+  canvas.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive: false });
+  canvas.addEventListener('touchmove', onMove, { passive: false });
+  canvas.addEventListener('touchend', onUp, { passive: false });
+
+  // ---------- Physics ----------
+  function update() {
+    if (pocketedAnim) {
+      pocketedAnim.t += 0.06;
+      if (pocketedAnim.t >= 1) { pocketedAnim = null; win(); }
+      return;
+    }
+    if (!ball.inPlay) return;
+    const speed = Math.hypot(ball.vx, ball.vy);
+    if (speed < 0.05) { ball.vx = ball.vy = 0; return; }
+
+    ball.x += ball.vx; ball.y += ball.vy;
+
+    // Pocket check (forgiving capture radius)
+    for (const pk of pockets) {
+      if (Math.hypot(ball.x - pk.x, ball.y - pk.y) < pocketR * 0.9) {
+        ball.inPlay = false; ball.vx = ball.vy = 0;
+        pocketedAnim = { x: pk.x, y: pk.y, sx: ball.x, sy: ball.y, t: 0 };
+        return;
+      }
+    }
+
+    // Rail bounces
+    const minX = rail + ballR, maxX = W - rail - ballR;
+    const minY = rail + ballR, maxY = H - rail - ballR;
+    if (ball.x < minX) { ball.x = minX; ball.vx = -ball.vx * 0.82; }
+    if (ball.x > maxX) { ball.x = maxX; ball.vx = -ball.vx * 0.82; }
+    if (ball.y < minY) { ball.y = minY; ball.vy = -ball.vy * 0.82; }
+    if (ball.y > maxY) { ball.y = maxY; ball.vy = -ball.vy * 0.82; }
+
+    // Friction
+    ball.vx *= 0.988; ball.vy *= 0.988;
+  }
+
+  function win() {
+    playing = false;
+    winMsg.textContent = winMessages[Math.floor(Math.random() * winMessages.length)];
+    winStats.textContent = (shots === 1) ? 'Sunk it in a single shot! 🏆' : 'Sunk it in ' + shots + ' shots! 🎉';
+    winScreen.classList.remove('hidden');
+  }
+
+  // ---------- Render ----------
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Wooden frame
+    roundRect(0, 0, W, H, 16);
+    ctx.fillStyle = '#5b3a1e'; ctx.fill();
+
+    // Felt
+    ctx.fillStyle = '#1f7a4d';
+    ctx.fillRect(rail, rail, W - rail * 2, H - rail * 2);
+    // subtle felt shading
+    const g = ctx.createRadialGradient(W/2, H/2, W*0.1, W/2, H/2, H*0.7);
+    g.addColorStop(0, 'rgba(255,255,255,0.06)');
+    g.addColorStop(1, 'rgba(0,0,0,0.18)');
+    ctx.fillStyle = g;
+    ctx.fillRect(rail, rail, W - rail * 2, H - rail * 2);
+
+    // Pockets
+    for (const pk of pockets) {
+      ctx.beginPath();
+      ctx.arc(pk.x, pk.y, pocketR, 0, Math.PI * 2);
+      ctx.fillStyle = '#0a0a0a'; ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.stroke();
+    }
+
+    // Pocketing animation (ball shrinking into pocket)
+    if (pocketedAnim) {
+      const t = pocketedAnim.t;
+      const x = pocketedAnim.sx + (pocketedAnim.x - pocketedAnim.sx) * t;
+      const y = pocketedAnim.sy + (pocketedAnim.y - pocketedAnim.sy) * t;
+      drawBall(x, y, ballR * (1 - t * 0.85));
+      return;
+    }
+
+    if (ball.inPlay) {
+      // Aim guide + cue while aiming
+      if (aiming) {
+        let dx = ball.x - aimX, dy = ball.y - aimY;
+        let pull = Math.hypot(dx, dy);
+        if (pull > 4) {
+          const nx = dx / pull, ny = dy / pull;
+          const pw = Math.min(pull, MAX_PULL) / MAX_PULL;
+
+          // Forward dotted guide line (travel direction)
+          ctx.save();
+          ctx.setLineDash([6, 8]);
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+          ctx.beginPath();
+          ctx.moveTo(ball.x, ball.y);
+          ctx.lineTo(ball.x + nx * 260, ball.y + ny * 260);
+          ctx.stroke();
+          ctx.restore();
+
+          // Cue stick (behind ball, on the pull side)
+          const back = Math.min(pull, MAX_PULL);
+          const cueStart = { x: ball.x - nx * (ballR + 6 + back), y: ball.y - ny * (ballR + 6 + back) };
+          const cueEnd = { x: cueStart.x - nx * 150, y: cueStart.y - ny * 150 };
+          ctx.lineCap = 'round';
+          ctx.lineWidth = 8; ctx.strokeStyle = '#d9a066';
+          ctx.beginPath(); ctx.moveTo(cueStart.x, cueStart.y); ctx.lineTo(cueEnd.x, cueEnd.y); ctx.stroke();
+          ctx.lineWidth = 8; ctx.strokeStyle = '#7a4a20';
+          ctx.beginPath(); ctx.moveTo(cueEnd.x, cueEnd.y); ctx.lineTo(cueEnd.x - nx*30, cueEnd.y - ny*30); ctx.stroke();
+
+          // Power meter dot
+          ctx.beginPath();
+          ctx.arc(ball.x - nx*(ballR+6+back), ball.y - ny*(ballR+6+back), 5, 0, Math.PI*2);
+          ctx.fillStyle = pw > 0.75 ? '#ff6b6b' : (pw > 0.4 ? '#ffe066' : '#b8f7c2');
+          ctx.fill();
+        }
+      }
+      drawBall(ball.x, ball.y, ballR);
+    }
+  }
+
+  function drawBall(x, y, r) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#fafafa'; ctx.fill();
+    // shading
+    const g = ctx.createRadialGradient(x - r*0.3, y - r*0.3, r*0.1, x, y, r);
+    g.addColorStop(0, 'rgba(255,255,255,0.9)');
+    g.addColorStop(1, 'rgba(120,120,120,0.55)');
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.stroke();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // ---------- Loop ----------
+  function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+  window.addEventListener('resize', sizeCanvas);
+  window.startGame = startGame;
+  window.resetGame = resetGame;
+
+  sizeCanvas();
+  loop();
+</script>
+</body>
+</html>

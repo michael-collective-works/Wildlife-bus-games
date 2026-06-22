@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#1b4332" />
+<title>West Feliciana Wildlife — Win Your Phone Back!</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(165deg, #1b4332 0%, #2d6a4f 40%, #40916c 75%, #52b788 100%);
+    color: #fff;
+  }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px; text-align: center; min-height: 100vh;
+  }
+  .card {
+    width: 100%; max-width: 460px;
+    background: rgba(0, 0, 0, 0.26);
+    border: 2px solid rgba(255,255,255,0.18);
+    border-radius: 26px;
+    padding: 22px 20px 28px;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 18px 50px rgba(0,0,0,0.4);
+  }
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 800;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    background: rgba(255, 224, 102, 0.95); color: #1b4332;
+    padding: 5px 12px; border-radius: 999px; margin-bottom: 10px;
+  }
+  h1 { font-size: 24px; margin: 4px 0 2px; line-height: 1.15; }
+  h1 .wild { color: #ffe066; }
+  .emoji-row { font-size: 30px; letter-spacing: 3px; margin: 8px 0 4px; }
+
+  /* Louisiana map */
+  .map-wrap { margin: 6px auto 12px; width: 168px; }
+  .map-wrap svg { width: 100%; height: auto; display: block; }
+  .la-shape {
+    fill: rgba(255,255,255,0.14);
+    stroke: #ffe066; stroke-width: 2.5; stroke-linejoin: round;
+  }
+  .marker { fill: #ffe066; }
+  @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: .55; } }
+  .marker-pulse { fill: #ffe066; transform-origin: center; animation: pulse 1.8s ease-in-out infinite; transform-box: fill-box; }
+  .map-label { font-size: 11px; opacity: 0.85; margin-top: 2px; letter-spacing: .5px; }
+
+  .prompt {
+    font-size: 17px; line-height: 1.45; font-weight: 600;
+    background: rgba(255,255,255,0.10);
+    border-radius: 16px; padding: 14px 16px; margin: 4px 0 16px;
+  }
+  .prompt b { color: #ffe066; }
+  .prompt .big { display: block; font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+
+  input[type="number"] {
+    width: 100%; font-size: 30px; text-align: center;
+    padding: 14px; border-radius: 16px; border: none;
+    margin-bottom: 12px; font-weight: 800; color: #1b4332;
+    outline: none; -moz-appearance: textfield;
+  }
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  button {
+    width: 100%; font-size: 20px; font-weight: 800;
+    padding: 16px; border-radius: 16px; border: none;
+    cursor: pointer; color: #1b4332; background: #ffe066;
+    transition: transform 0.05s ease, filter 0.15s ease;
+  }
+  button:active { transform: scale(0.97); }
+  button.secondary {
+    background: rgba(255,255,255,0.18); color: #fff; margin-top: 12px;
+    border: 1.5px solid rgba(255,255,255,0.35);
+  }
+  .feedback { min-height: 64px; margin: 16px 0 4px; font-size: 19px; font-weight: 700; line-height: 1.35; }
+  .hint { font-size: 16px; opacity: 0.95; font-weight: 700; }
+  .attempts { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+  .win { color: #b8f7c2; }
+  .close { color: #ffe066; }
+  .far { color: #ffd0d0; }
+  .big-emoji { font-size: 60px; margin: 6px 0; animation: pop 0.5s ease; }
+  @keyframes pop { 0% { transform: scale(0); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+  .hidden { display: none; }
+  .footer { font-size: 11px; opacity: 0.6; margin-top: 16px; }
+  .finePrint {
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    font-size: 8px; opacity: 0.45; margin-top: 14px; line-height: 1.2;
+    cursor: pointer; user-select: none;
+  }
+  .finePrint input { width: 11px; height: 11px; margin: 0; accent-color: #ffe066; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <noscript>
+      <div class="prompt" style="background:#7a1f1f;">
+        ⚠️ JavaScript is off in this viewer, so the game can't run.<br>
+        Open this page in <b>Safari</b> or <b>Chrome</b> (not an email/file preview).
+      </div>
+    </noscript>
+
+    <div class="badge">🌲 West Feliciana Wildlife 🌲</div>
+    <h1>Win Your Phone Back!</h1>
+    <div class="emoji-row">🦌 🦉 🐊 🦋 🐢</div>
+
+    <!-- Stylized Louisiana outline with a marker on West Feliciana Parish -->
+    <div class="map-wrap">
+      <svg viewBox="0 0 240 220" role="img" aria-label="Map of Louisiana with West Feliciana Parish marked">
+        <path class="la-shape" d="
+          M30,38
+          L150,38
+          L150,70
+          L188,70
+          L192,116
+          L170,120
+          L184,140
+          L210,143
+          L192,153
+          L166,149
+          L151,164
+          C141,170 131,158 121,162
+          L101,151
+          C93,171 79,169 71,157
+          L49,166
+          L40,150
+          L34,120
+          L41,96
+          L30,70
+          Z" />
+        <!-- West Feliciana Parish marker (near the top of the 'toe', NW of Baton Rouge) -->
+        <circle class="marker-pulse" cx="158" cy="66" r="6" />
+        <circle class="marker" cx="158" cy="66" r="3.5" />
+      </svg>
+      <div class="map-label">📍 West Feliciana Parish, Louisiana</div>
+    </div>
+
+    <div id="game">
+      <div class="prompt">
+        <span class="big">Hey — are you bored? 😴</span>
+        Want your phone back? 📱 I'm thinking of a number between
+        <b>1 and 100</b>. <b>Pick a number</b> — get within <b>10</b> and it's yours!
+      </div>
+      <input id="guess" type="number" min="1" max="100" inputmode="numeric" placeholder="?" />
+      <button id="guessBtn" onclick="checkGuess()">Pick This Number! 🎯</button>
+      <div class="feedback" id="feedback"></div>
+      <div class="attempts" id="attempts"></div>
+    </div>
+
+    <div id="result" class="hidden">
+      <div class="big-emoji" id="resultEmoji"></div>
+      <div class="feedback" id="resultText"></div>
+      <button class="secondary" id="playAgain" onclick="newGame()">Play Again 🔁</button>
+    </div>
+
+    <label class="finePrint">
+      <input type="checkbox" id="readBox" />
+      <span>if you want your phone back, check this box</span>
+    </label>
+
+    <div class="footer">West Feliciana Wildlife Bus Trip 🚌 · Guess-to-Win</div>
+  </div>
+
+<script>
+  let secret, attempts;
+
+  const guessEl     = document.getElementById('guess');
+  const guessBtn    = document.getElementById('guessBtn');
+  const feedback    = document.getElementById('feedback');
+  const attemptsEl  = document.getElementById('attempts');
+  const gameEl      = document.getElementById('game');
+  const resultEl    = document.getElementById('result');
+  const resultEmoji = document.getElementById('resultEmoji');
+  const resultText  = document.getElementById('resultText');
+  const readBox     = document.getElementById('readBox');
+
+  const critters = ['🦌','🦉','🐊','🦋','🐢','🦅','🐍','🦝','🐸','🦫'];
+
+  function newGame() {
+    secret = Math.floor(Math.random() * 100) + 1;
+    attempts = 0;
+    feedback.textContent = '';
+    feedback.className = 'feedback';
+    attemptsEl.textContent = '';
+    guessEl.value = '';
+    gameEl.classList.remove('hidden');
+    resultEl.classList.add('hidden');
+    guessBtn.disabled = false;
+    readBox.checked = false; // reset every new game — did they read it?
+    guessEl.focus();
+  }
+
+  function checkGuess() {
+    const g = parseInt(guessEl.value, 10);
+    if (isNaN(g) || g < 1 || g > 100) {
+      feedback.className = 'feedback far';
+      feedback.textContent = '🐾 Pick a number between 1 and 100!';
+      return;
+    }
+    attempts++;
+    const diff = Math.abs(g - secret);
+
+    // Within 10 — but you only win if you read the fine print and checked the box
+    if (diff <= 10 && readBox.checked) {
+      gameEl.classList.add('hidden');
+      resultEl.classList.remove('hidden');
+      resultEmoji.textContent = (diff === 0) ? '🏆' : '📱';
+      resultText.className = 'feedback win';
+      const lead = (diff === 0)
+        ? 'BULLSEYE! Spot on! '
+        : 'You were within 10! ';
+      resultText.innerHTML =
+        lead + 'My number was <b>' + secret + '</b>.<br>' +
+        '🎉 You get your phone back! 🎉<br>' +
+        '<span class="attempts">Nice — you read the fine print AND checked the box! 👀✅</span><br>' +
+        '<span class="attempts">Solved in ' + attempts +
+        (attempts === 1 ? ' guess' : ' guesses') + '</span>';
+      return;
+    }
+
+    if (diff <= 10 && !readBox.checked) {
+      // Close enough to win... but the box isn't checked, so no phone back yet
+      feedback.className = 'feedback close';
+      feedback.innerHTML =
+        'Sooo close — within 10! 😮 But you forgot to <b>check the little box ' +
+        'at the bottom</b>. Read the fine print, tick it, then guess again to ' +
+        'win your phone back! 👀';
+      attemptsEl.textContent = 'Guesses so far: ' + attempts;
+      guessEl.value = '';
+      guessEl.focus();
+      return;
+    }
+
+    const critter = critters[Math.floor(Math.random() * critters.length)];
+    const direction = (g < secret) ? 'higher ⬆️' : 'lower ⬇️';
+    let warmth;
+    if (diff <= 20) { warmth = 'So close! 🔥 The ' + critter + ' says go '; feedback.className = 'feedback close'; }
+    else if (diff <= 40) { warmth = 'Getting warmer. Go '; feedback.className = 'feedback close'; }
+    else { warmth = 'Brrr, cold! 🧊 Way '; feedback.className = 'feedback far'; }
+
+    feedback.innerHTML = warmth + '<span class="hint">' + direction + '</span>';
+    attemptsEl.textContent = 'Guesses so far: ' + attempts;
+    guessEl.value = '';
+    guessEl.focus();
+  }
+
+  // Expose for the inline onclick fallbacks
+  window.checkGuess = checkGuess;
+  window.newGame = newGame;
+
+  guessBtn.addEventListener('click', checkGuess);
+  guessEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') checkGuess(); });
+  document.getElementById('playAgain').addEventListener('click', newGame);
+
+  newGame();
+</script>
+</body>
+</html>
